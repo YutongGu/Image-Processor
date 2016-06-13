@@ -8,6 +8,8 @@ import javax.swing.*;
 public class ImageCanvas extends JPanel{
 	private BufferedImage img; //the image that appears on this canvas
 	private BufferedImage original; //this will be the original image
+	private BufferedImage prev;
+	private int[] slidevals=new int[4];
 	static final double radify= Math.PI/180; //this turns degrees into radians
 	private int w, h;
 	private static final int TYPE = BufferedImage.TYPE_INT_ARGB_PRE;
@@ -15,6 +17,7 @@ public class ImageCanvas extends JPanel{
 	public int getH(){return h;}
 	public BufferedImage getImg(){return img;}
 	public BufferedImage getOrg(){return original;}
+	public void updateSlideVals(int[] vals){slidevals=vals;}
 	
 	/** ***************** PIXEL FUNCTIONS ****************** **/
 	 public static final int A=0, R=1, G=2, B=3;
@@ -55,10 +58,19 @@ public class ImageCanvas extends JPanel{
 		img = new BufferedImage(100,100,TYPE);
 		w = img.getWidth();
 		h = img.getHeight();
-		
+	}
+	static BufferedImage deepCopy(BufferedImage bi) {
+		 ColorModel cm = bi.getColorModel();
+		 boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();
+		 WritableRaster raster = bi.copyData(null);
+		 return new BufferedImage(cm, raster, isAlphaPremultiplied, null);
+	}
+	public BufferedImage getImage(){return img;}
+	
+	public void updatePrevImage(BufferedImage prevImg){
+		prev=deepCopy(prevImg);
 	}
 	
-	public BufferedImage getImage(){return img;}
 	public void setImage(File file){
 		try{ 
 			original= ImageIO.read((file)); 
@@ -66,7 +78,7 @@ public class ImageCanvas extends JPanel{
 			MediaTracker mt = new MediaTracker(new Component(){});
 			mt.addImage(img, 0);
 			mt.waitForAll();
-			
+			prev=deepCopy(img);
 		}
 		catch(Exception ex){ex.printStackTrace();}
 		w = img.getWidth();
@@ -83,14 +95,13 @@ public class ImageCanvas extends JPanel{
 		int R;
 		int G; 
 		int	B; 
-		int[][] image = imgToArray(img); //this will be where things are changed
-		int[][] orig = imgToArray(original); //will talk to the original to change the original red up
+		int[][] image = imgToArray(prev); //this will be where things are changed
 		for(int r=0; r<h; r++) 
 			for(int c=0; c<w; c++){
-				R = howRed(orig[r][c]); //r= red value of original 
+				R = howRed(image[r][c]); //r= red value of original 
 				G = howGreen(image[r][c]); //g= green value of the current image
 				B = howBlue(image[r][c]); //b= blue value of current image
-				R*=(red/255.0); //r is factored down by (red/255.0)
+				R +=(red-slidevals[0]); //r is factored down by (red/255.0)
 				img.setRGB(c, r, combine(0,R,G,B)); //combines the values
 			}
 				
@@ -102,14 +113,13 @@ public class ImageCanvas extends JPanel{
 		int R;
 		int G; 
 		int	B; 
-		int[][] image = imgToArray(img); //this will be where things are changed
-		int[][] orig = imgToArray(original); //will talk to the original to change the original red up
+		int[][] image = imgToArray(prev); //this will be where things are changed
 		for(int r=0; r<h; r++)
 			for(int c=0; c<w; c++){
 				R = howRed(image[r][c]); //r= red value of current image
-				G = howGreen(orig[r][c]); //g= green value of the original
+				G = howGreen(image[r][c]); //g= green value of the original
 				B = howBlue(image[r][c]); //b= blue value of current image
-				G*=(green/255.0); //g is factored down by (red/255.0)
+				G +=(green-slidevals[1]); //g is factored down by (red/255.0)
 				img.setRGB(c, r, combine(0,R,G,B)); //combines the values
 			}
 				
@@ -121,14 +131,13 @@ public class ImageCanvas extends JPanel{
 		int R;
 		int G; 
 		int	B; 
-		int[][] image = imgToArray(img); //this will be where things are changed
-		int[][] orig = imgToArray(original); //will talk to the original to change the original red up
+		int[][] image = imgToArray(prev); //this will be where things are changed
 		for(int r=0; r<h; r++)
 			for(int c=0; c<w; c++){
 				R = howRed(image[r][c]); //r= red value of current image
 				G = howGreen(image[r][c]); //g= green value of  current image
-				B = howBlue(orig[r][c]); //b= blue value of the original
-				B*=(blue/255.0); //b is factored down by (red/255.0)
+				B = howBlue(image[r][c]); //b= blue value of the original
+				B +=(blue-slidevals[2]); //b is factored down by (red/255.0)
 				img.setRGB(c, r, combine(0,R,G,B)); //combines the values
 			}
 				
@@ -145,12 +154,12 @@ public class ImageCanvas extends JPanel{
 		for(int r=0; r<h; r++)
 			for(int c=0; c<w; c++){
 
-				red= 255-howRed(orig[r][c]); // red values are flipped
-				green= 255-howGreen(orig[r][c]); //green values are flipped
-				blue= 255-howBlue(orig[r][c]); //blue values are flipped
+				red= 255-howRed(orig[r][c])+2*slidevals[0]+2*slidevals[3]; // red values are flipped
+				green= 255-howGreen(orig[r][c])+2*slidevals[1]+2*slidevals[3]; //green values are flipped
+				blue= 255-howBlue(orig[r][c])+2*slidevals[2]+2*slidevals[3]; //blue values are flipped
 
 				img.setRGB(c, r, combine(0,red,green,blue)); //combines the values
-				original.setRGB(c, r, combine(0,red,green,blue));
+				prev.setRGB(c, r, combine(0,red,green,blue));
 			}
 		
 
@@ -159,7 +168,12 @@ public class ImageCanvas extends JPanel{
 	
 	public void brightness(int light){
 		int red, green, blue;
-		int[][] image = imgToArray(original);
+		int[][] image;
+		if(prev!=null)
+			 image = imgToArray(prev);
+		else
+			image= imgToArray(original);
+		light-=slidevals[3];
 		for(int r=0; r<h; r++)
 			for(int c=0; c<w; c++){
 				red= howRed(image[r][c])+light; // red values are increased/decreased
@@ -181,6 +195,7 @@ public class ImageCanvas extends JPanel{
 				img.setRGB(c, r, combine(0,red,green,blue)); //combines the values
 				
 			}
+		
 		repaint();
 	}
 	
@@ -367,7 +382,7 @@ public class ImageCanvas extends JPanel{
 			for(int c=0; c<w; c++){
 				coor[0]=c; //stores the x in coor[0]
 				coor[1]=r; //stores the y in coor[1]
-				newCoor= transHelp(coor, matrix); //trasforms the coor with the given matrix
+				newCoor= transHelp(coor, matrix); //transforms the coor with the given matrix
 				newImg[newCoor[1]+yShift][newCoor[0]+xShift]= orig[r][c]; //the new img will be placed in a shifted location that fits in the new img
 			}
 		}
