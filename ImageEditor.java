@@ -27,6 +27,7 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.MouseInputListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 
 public class ImageEditor extends JFrame implements ActionListener, ChangeListener, MouseInputListener{
@@ -60,7 +61,8 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 	private JMenuItem widen;
 	private JMenuItem transform;
 	private JMenuItem save;
-	private final JFileChooser jfc = new JFileChooser();
+	private final JFileChooser jfcOpen = new JFileChooser();
+	private final JFileChooser jfcSave = new JFileChooser();
 	
 	public ImageEditor(){
 		super("IMAGE EDITOR by Yutong Gu");
@@ -79,6 +81,10 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 		this.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		heightConstraint=this.getBounds().height-50;
 		widthConstraint=this.getBounds().width-50;
+		jfcOpen.changeToParentDirectory();
+		jfcOpen.setFileFilter(new FileNameExtensionFilter(null,"jpeg", "png", "jpg"));
+		jfcSave.changeToParentDirectory();
+		jfcSave.addChoosableFileFilter(new FileNameExtensionFilter(null,"jpeg", "png", "jpg"));
 		
 		JScrollPane stuff = new JScrollPane(alter);
 		this.add(stuff, BorderLayout.CENTER);
@@ -251,28 +257,31 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 		}
 		
 		if(e.getSource()==open){
-			jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-			int result = jfc.showOpenDialog(ImageEditor.this);
-			if(result == JFileChooser.CANCEL_OPTION)
-				return;
-			File f = jfc.getSelectedFile();
-			if(isValidSize(f)){
-				orig.setImage(f);
-				alter.setImage(f);
-			}
-			else{
-				JOptionPane.showMessageDialog(null, "Sorry, the image you've selected is too large. Please select an image smaller than "+widthConstraint+"x"+heightConstraint+"."	);
-			}
+			jfcOpen.setFileSelectionMode(JFileChooser.FILES_ONLY);
+			int result;
+			File f;
+			do{
+				result = jfcOpen.showOpenDialog(ImageEditor.this);
+				if(result == JFileChooser.CANCEL_OPTION)
+					return;
+				f = jfcOpen.getSelectedFile();
+				if(isValidSize(f)){
+					orig.setImage(f);
+					alter.setImage(f);
+				}
+				else{
+					JOptionPane.showMessageDialog(null, "Sorry, the image you've selected is too large. Please select an image smaller than "+widthConstraint+"x"+heightConstraint+"."	);
+				}
+			}while(!isValidSize(f)&&result!=JFileChooser.CANCEL_OPTION&&result!=JFileChooser.ERROR_OPTION);
 			
 			this.repaint();
 		}
 		else if(e.getSource()==save){
-			jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-			
-			int result = jfc.showSaveDialog(ImageEditor.this);
+			jfcSave.setFileSelectionMode(JFileChooser.FILES_ONLY);
+			int result = jfcSave.showSaveDialog(ImageEditor.this);
 			if(result == JFileChooser.CANCEL_OPTION)
 				return;
-			File f = jfc.getSelectedFile();
+			File f = jfcSave.getSelectedFile();
 			String file_name = f.toString();
 			if (!file_name.endsWith(".png")){
 			    f = new File(f.toString()+".png");
@@ -316,6 +325,14 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 			greenSlide.setValue(greenSlide.getValue()*-1);
 			blueSlide.setValue(blueSlide.getValue()*-1);
 			brightSlide.setValue(brightSlide.getValue()*-1);
+			int[] vals= new int[4];
+			vals[0]=redSlide.getValue();
+			vals[1]=greenSlide.getValue();
+			vals[2]=blueSlide.getValue();
+			vals[3]=brightSlide.getValue();
+			update(vals);	
+			alter.updateSlideVals(vals);
+			
 		}
 		else if(e.getSource()==flipH){
 			alter.mirrorHoriz();
