@@ -200,13 +200,11 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 		if(redoslidestack.size()!=0){
 			int[] valArray=redoslidestack.pop();
 			slidestack.push(valArray);
+			redSlide.setValue(valArray[0]);
+			greenSlide.setValue(valArray[1]);
+			blueSlide.setValue(valArray[2]);
+			brightSlide.setValue(valArray[3]);
 			
-			if(valArray[0]!=-129){
-				redSlide.setValue(valArray[0]);
-				greenSlide.setValue(valArray[1]);
-				blueSlide.setValue(valArray[2]);
-				brightSlide.setValue(valArray[3]);
-			}
 		}
 		if(redostack.size()!=0){
 			stack.push(redostack.peek());
@@ -215,18 +213,14 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 	}
 	
 	public void update(){
+		
 		redostack.clear();
 		redoslidestack.clear();
-		int[] val={-129,-129,-129,-129};
-		slidestack.push(val);
+		int[] vals= {redSlide.getValue(), greenSlide.getValue(), blueSlide.getValue(), brightSlide.getValue()};
+		slidestack.push(vals);
 		stack.push(alter.imgToArray(alter.getImg()));
 	}
-	public void update(int [] array){
-		redostack.clear();
-		redoslidestack.clear();
-		slidestack.push(array);
-		stack.push(alter.imgToArray(alter.getImg()));
-	}
+	
 	public void restore(){
 		redostack.clear();
 		redoslidestack.clear();
@@ -234,6 +228,17 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 		greenSlide.setValue(0);
 		blueSlide.setValue(0);
 		brightSlide.setValue(0);
+		int[] vals= {redSlide.getValue(), greenSlide.getValue(), blueSlide.getValue(), brightSlide.getValue()};
+		alter.updateSlideVals(vals);
+		alter.arrayToImg(orig.imgToArray(orig.getImage()));
+		alter.updatePrevImage(alter.getImage());
+	}
+	public void reset(){
+		restore();
+		stack.clear();
+		slidestack.clear();
+		int[] vals= {redSlide.getValue(), greenSlide.getValue(), blueSlide.getValue(), brightSlide.getValue()};
+		alter.updateSlideVals(vals);
 		alter.arrayToImg(orig.imgToArray(orig.getImage()));
 		alter.updatePrevImage(alter.getImage());
 	}
@@ -273,7 +278,7 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 					JOptionPane.showMessageDialog(null, "Sorry, the image you've selected is too large. Please select an image smaller than "+widthConstraint+"x"+heightConstraint+"."	);
 				}
 			}while(!isValidSize(f)&&result!=JFileChooser.CANCEL_OPTION&&result!=JFileChooser.ERROR_OPTION);
-			
+			reset();
 			this.repaint();
 		}
 		else if(e.getSource()==save){
@@ -330,7 +335,6 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 			vals[1]=greenSlide.getValue();
 			vals[2]=blueSlide.getValue();
 			vals[3]=brightSlide.getValue();
-			update(vals);	
 			alter.updateSlideVals(vals);
 			
 		}
@@ -440,7 +444,7 @@ public class ImageEditor extends JFrame implements ActionListener, ChangeListene
 		vals[1]=greenSlide.getValue();
 		vals[2]=blueSlide.getValue();
 		vals[3]=brightSlide.getValue();
-		update(vals);	
+		update();	
 		alter.updateSlideVals(vals);
 	}
 
